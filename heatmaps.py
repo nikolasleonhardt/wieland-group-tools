@@ -7,7 +7,9 @@ from scipy.stats import gaussian_kde
 import os
 import pandas as pd
 import math as m
+import warnings 
 
+#Set constant variables for the analysis
 number_of_bins:int = 50
 number_of_measurement_rows:int = 5
 frame_time_row:int = 0
@@ -15,20 +17,35 @@ radius_row:int = 1
 angle_row:int = 2
 signal_1_row:int = 3
 signal_2_row:int = 4
+sigma_deviation_cutoff:int = 3
+sensor = 'one'
+number_of_2d_bins:int = 100
+
+#Set constant variables for the file structure
 outputappendix:str = 'centerEdgeRatios'
 inputappendix:str = ''
 inputfolder = 'allNSF/'
 mouse_id_length:int = 2
-sigma_deviation_cutoff:int = 3
-sensor = 'one'
-number_of_2d_bins:int = 100
+
 path_of_script = os.path.dirname(os.path.realpath(__file__))
 outputpath = os.path.join(path_of_script, outputappendix)
+os.makedirs(outputpath, exist_ok=True)
+
 z_max = 0
 zAreaMax = 0
 colorPlotMax = 0.0036
 
 def extract_mouse_id(file_name, mouse_id_length):
+    """
+    Extracts the mouse id from the given file name.
+
+    Parameters:
+        file_name (str): The name of the file from which to extract the mouse id.
+        mouse_id_length (int): The length of the mouse id.
+
+    Returns:
+        str: The extracted mouse id.
+    """
     mouse_id = ''
     count = 0
     for char in file_name:
@@ -39,7 +56,21 @@ def extract_mouse_id(file_name, mouse_id_length):
                 break
     return mouse_id
 
-def createSingleLocationHeatmap(filepath, weighted=False, savePlot=False, centerEdgeRatioBool=False):
+def createSingleLocationHeatmap(filepath: str, weighted: bool=False, savePlot: bool=False, centerEdgeRatioBool: bool=False):
+    """
+    Creates a heatmap of the location of the mouse during the experiment. The heatmap is created using a gaussian kernel density estimation 
+    and represents a probability estimate of the mouse being in a certain location.
+
+    Parameters:
+        filepath (str): The path to the file containing the data.
+        weighted (bool): A boolean value indicating whether the heatmap should be calculated using only calcium measurements above a given sigma treshold.
+        savePlot (bool): A boolean value indicating whether the plot should be saved.
+        centerEdgeRatioBool (bool): A boolean value indicating whether the center-edge ratio should be calculated for the caclulated heatmap should be calculated.
+    
+    Returns:
+        tuple: A tuple containing the x and y coordinates of the mouse, the x and y coordinates of the mouse when the signal strength is above the threshold
+                and (if calculated) the center-edge ratio. 
+    """
     global z_max
     global zAreaMax
     print(filepath)
@@ -61,7 +92,7 @@ def createSingleLocationHeatmap(filepath, weighted=False, savePlot=False, center
     lengthOfExperiment = np.size(radius_data_array)
 
     if weighted and highX.size == 0:
-        print('Dieses Tier hatte keine Messungen über dem Schwellenwert!')
+        warnings.warn('This mouse had no high calcium measurements. Therefore no heatmap will be created.')
         return x_array, y_array, highX, highY, np.nan
 
     
@@ -71,29 +102,37 @@ def createSingleLocationHeatmap(filepath, weighted=False, savePlot=False, center
     kde = gaussian_kde(xy)
 
     xgrid, ygrid = np.mgrid[-1:1:100j, -1:1:100j]
-    propabilityLocation = kde(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
-    propabilityLocationHigh = kdeHigh(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
-    probabilityHigh = highX.size/x_array.size
-    #zgridBayesian = propabilityLocationHigh * probabilityHigh / propabilityLocation
-    zgridBayesian = propabilityLocationHigh 
-    #plt.contourf(xgrid, ygrid, zgridNormalized, 50, cmap='viridis', vmin=0, vmax=1)
-    #plt.contourf(xgrid, ygrid, zgridAreaNormalized, 50, cmap='viridis', levels=np.linspace(0., colorPlotMax, 100), norm=norm)
-    #plt.contourf(xgrid, ygrid, zgridAreaNormalized, 50, cmap='viridis')
+    probabilityLocation = kde(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
+    probabilityLocationHigh = kdeHigh(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
     if weighted:
-        plt.contourf(xgrid, ygrid, zgridBayesian, 50, cmap='viridis')
+        plt.contourf(xgrid, ygrid, probabilityLocationHigh, 50, cmap='viridis')
     else:
-        plt.contourf(xgrid, ygrid, propabilityLocation, 50, cmap='viridis')
+        plt.contourf(xgrid, ygrid, probabilityLocation, 50, cmap='viridis')
     plt.colorbar(label='probability density')
     if savePlot:
         outputpath = os.path.join(path_of_script, outputappendix, filepath.split('/')[-2])
         plt.savefig(os.path.join(outputpath, mouseID+'heatmap.png'))
     plt.clf()
     if centerEdgeRatioBool:
-        centerEdgeRatio = getCenterEdgeRatios(zgridBayesian, 0.2)
+        centerEdgeRatio = getCenterEdgeRatios(probabilityLocationHigh, 0.2)
         return x_array, y_array, highX, highY, centerEdgeRatio
-    return x_array, y_array, highX, highY
+    return x_array, y_array, highX, highY, np.nan
 
-def createBatchLocationHeatmaps(folderpath, weighted=False, savePlot=False, centerEdgeRatioBool=False, jackknifeBool=False, jackknifeFile=None):
+def createBatchLocationHeatmaps(folderpath: str, weighted: bool=False, savePlot: bool=False, centerEdgeRatioBool: bool=False, jackknifeBool: bool=False, jackknifeFile: bool=None):
+    """
+    Creates both the individual heatmpas for all mice in a given folder and a combined heatmap of all the measurements in the folder, obtained by concatenating
+    the individual measurements and performing a gaussian kernel density estimation on the combined data.
+    Additionally the center-edge ratio can be calculated for each mouse and the combined data.
+
+    Parameters:
+        folderpath (str): The path to the folder containing the data.
+        weighted (bool): A boolean value indicating whether the heatmap should be calculated using only calcium measurements above a given sigma treshold.
+        savePlot (bool): A boolean value indicating whether the resulting plots should be saved.
+        centerEdgeRatioBool (bool): A boolean value indicating whether the center-edge ratio should be calculated for the caclulated heatmap should be calculated.
+        jackknifeBool (bool): A boolean value indicating whether for use in jackknife resampling an experiment run should be omitted from the combined heatmap
+                                and the center-edge ratio calculation.
+        jackknifeFile (str): The name of the file to be omitted from the combined heatmap and center-edge ratio calculation.
+    """
     global z_max
     norm = colors.Normalize(vmin=0., vmax=colorPlotMax)
     print(folderpath)
@@ -121,12 +160,6 @@ def createBatchLocationHeatmaps(folderpath, weighted=False, savePlot=False, cent
     xgrid, ygrid = np.mgrid[-1:1:100j, -1:1:100j]
     probabilityLocation = kdeLocation(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
     probabilityLocationHigh = kdeHigh(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
-    probabilityHigh = highX_combined.size/x_combined.size
-    #zGridBayesian = probabilityLocationHigh * probabilityHigh / probabilityLocation
-    zGridBayesian = probabilityLocationHigh
-    #plt.contourf(xgrid, ygrid, zgridNormalized, 50, cmap='viridis', vmin=0, vmax=1)
-    #plt.contourf(xgrid, ygrid, zgridAreaNormalized, 50, cmap='viridis', levels=np.linspace(0., colorPlotMax, 100), norm=norm)
-    #plt.contourf(xgrid, ygrid, zgridAreaNormalized, 50, cmap='viridis')
     if centerEdgeRatioBool:
         finalArray = np.vstack([miceList, centerEdgeRatioArray])
         np.savetxt(os.path.join(path_of_script, outputappendix, 'centerEdgeRatios.csv'), finalArray.T, delimiter=',', fmt='%s')
@@ -137,7 +170,7 @@ def createBatchLocationHeatmaps(folderpath, weighted=False, savePlot=False, cent
         meanFinalArray = np.array([centerEdgeRatioMean, centerEdgeRatioSem])
         np.savetxt(os.path.join(path_of_script, outputappendix, 'centerEdgeRatiosMean.csv'), meanFinalArray, delimiter=',', fmt='%s', header='Mean, SEM')
     if weighted:
-        plt.contourf(xgrid, ygrid, zGridBayesian, 50, cmap='viridis')
+        plt.contourf(xgrid, ygrid, probabilityLocationHigh, 50, cmap='viridis')
     else:
         plt.contourf(xgrid, ygrid, probabilityLocation, 50, cmap='viridis')
     plt.colorbar(label='probability density')
@@ -146,11 +179,23 @@ def createBatchLocationHeatmaps(folderpath, weighted=False, savePlot=False, cent
         plt.savefig(os.path.join(outputpath, 'combined_heatmap.png'))
     plt.clf()
     if jackknifeBool:
-        centerEdgeJackknife = getCenterEdgeRatios(zGridBayesian, 0.2)
+        centerEdgeJackknife = getCenterEdgeRatios(probabilityLocationHigh, 0.2)
         return x_combined, y_combined, highX_combined, highY_combined, centerEdgeJackknife
     return x_combined, y_combined, highX_combined, highY_combined
 
-def createAllMiceLocationHeatmap(folderPathList, weighted=False, savePlot=False):
+def createAllMiceLocationHeatmap(folderPathList: list, weighted: bool=False, savePlot: bool=False):
+    """
+    Works the same as createBatchLocationHeatmaps, but is called on a list of folders instead of a single folder. For each folder 'createBatchLocationHeatmaps'
+    is called. In the end a combined heatmap of all the data is created.
+
+    Parameters:
+        folderPathList (list): A list of the paths to the folders containing the data.
+        weighted (bool): A boolean value indicating whether the heatmap should be calculated using only calcium measurements above a given sigma treshold.
+        savePlot (bool): A boolean value indicating whether the resulting plots should be saved.
+
+    Returns:
+        None
+    """
     global z_max
     norm = colors.Normalize(vmin=0, vmax=colorPlotMax)
     x_combined, y_combined, highX_combined, highY_combined = np.array([]), np.array([]), np.array([]), np.array([])
@@ -168,30 +213,46 @@ def createAllMiceLocationHeatmap(folderPathList, weighted=False, savePlot=False)
     xgrid, ygrid = np.mgrid[-1:1:100j, -1:1:100j]
     probabilityLocation = kdeLocation(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
     probabilityLocationHigh = kdeHigh(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
-    probabilityHigh = highX_combined.size/x_combined.size
-    #zgridBayesian = probabilityLocationHigh * probabilityHigh / probabilityLocation
-    zgridBayesian = probabilityLocationHigh
-    #plt.contourf(xgrid, ygrid, zgridNormalized, 50, cmap='viridis', vmin=0, vmax=1)
-    #plt.contourf(xgrid, ygrid, zgridAreaNormalized, 50, cmap='viridis', levels=np.linspace(0., colorPlotMax, 100), norm=norm)
-    #plt.contourf(xgrid, ygrid, zgridAreaNormalized, 50, cmap='viridis')
     if weighted:
-        plt.contourf(xgrid, ygrid, zgridBayesian, 50, cmap='viridis')
+        plt.contourf(xgrid, ygrid, probabilityLocationHigh, 50, cmap='viridis')
     else:
         plt.contourf(xgrid, ygrid, probabilityLocation, 50, cmap='viridis')
     plt.colorbar(label='probability density')
     if savePlot:
         plt.savefig(os.path.join(path_of_script, outputappendix, 'allMiceheatmap.png'))
     plt.clf()
-    return zgridBayesian
+    return None
 
-def calculateBhattacharyya(distribution1, distribution2):
+def calculateBhattacharyya(distribution1: np.ndarray, distribution2: np.ndarray):
+    """
+    Calculates the Bhattacharyya distance and coefficient between two given distributions.
+
+    Parameters:
+        distribution1 (np.ndarray): The first distribution.
+        distribution2 (np.ndarray): The second distribution.
+    
+    Returns:
+        tuple: A tuple containing the Bhattacharyya distance and coefficient.
+    """
     distribution1 = distribution1/np.size(distribution1)
     distribution2 = distribution2/np.size(distribution2)
     coefficient = np.sum(np.sqrt(distribution1*distribution2))
     distance = -m.log(coefficient)
     return distance, coefficient
 
-def getCenterEdgeRatios(distribution, percentageOfEdgeLength):
+def getCenterEdgeRatios(distribution: np.ndarray, percentageOfEdgeLength: float):
+    """
+    Calculates the center-edge ratio of a given distribution. The center-edge ratio is defined as the ratio of the mean of the center of the distribution 
+    to the mean of the edge of the distribution, where the edge is defined as the outermost 'percentageOfEdgeLength' of the distribution and the center as the
+    innermost 'percentageOfEdgeLength' of the distribution.
+
+    Parameters:
+        distribution (np.ndarray): The distribution for which to calculate the center-edge ratio.
+        percentageOfEdgeLength (float): The percentage of the edge length to use for the calculation of center and edge.
+    
+    Returns:
+        centerEdgeRatio (float): The calculated center-edge ratio.
+    """
     originalEdgeLength = np.size(distribution[0])
     edgeLength = int(percentageOfEdgeLength*originalEdgeLength)
     lowerBound = int((originalEdgeLength - edgeLength)/2)
@@ -200,14 +261,29 @@ def getCenterEdgeRatios(distribution, percentageOfEdgeLength):
     edge = np.concatenate([distribution[0:lowerBound, 0:originalEdgeLength].flatten(), distribution[0:originalEdgeLength, 0:lowerBound].flatten(), distribution[0:originalEdgeLength, upperBound:originalEdgeLength].flatten(), distribution[upperBound:originalEdgeLength, 0:originalEdgeLength].flatten()])
     centerSum = np.mean(center)
     edgeSum = np.mean(edge)
-    return centerSum/edgeSum
+    centerEdgeRatio = centerSum/edgeSum
+    return centerEdgeRatio
 
-def jackknife(folderPath, weighted=False, savePlot=False):
+def jackknife(folderPath: str, weighted: bool=False, savePlot: bool=False):
+    """
+    Uses the jackknife resampling method to estimate the center-edge ratio and its error for the data in the given folder.
+    The values obtained by dropping a specific file are saved in a csv file called 'jackknifeCenterEdgeRatios.csv'.
+    The final result for the mean and standard error of the center-edge ratio are saved in a file called 'jackknifeCenterEdgeRatiosMean.csv'.
+    Depending on the number of files included in the analysis, this function can take a long time to run!
+
+    Parameters:
+        folderPath (str): The path to the folder containing the data.
+        weighted (bool): A boolean value indicating whether the heatmap should be calculated using only calcium measurements above a given sigma treshold.
+        savePlot (bool): A boolean value indicating whether the resulting plots should be saved.
+    
+    Returns:
+        None
+    """
     filesToAnalyze = [f for f in os.listdir(folderPath) if not f.startswith('.')]
     jackknifeArray = np.array([])
     jackknifedFileList = []
     for index, file in enumerate(filesToAnalyze):
-        print('Jackknife: ' + file)
+        print('Jackknifed: ' + file)
         jackknifedFileList.append(file)
         x_buffer, y_buffer, highX_buffer, highY_buffer, centerEdgeRatio = createBatchLocationHeatmaps(folderPath, weighted=weighted, savePlot=savePlot, centerEdgeRatioBool=True, jackknifeBool=True, jackknifeFile=file)
         jackknifeArray = np.append(jackknifeArray, centerEdgeRatio)
@@ -216,7 +292,8 @@ def jackknife(folderPath, weighted=False, savePlot=False):
     np.savetxt(os.path.join(path_of_script, outputappendix, 'jackknifeCenterEdgeRatios.csv'), combinedFinalArray.T, delimiter=',', fmt='%s')
     heatmapsMean = np.mean(jackknifeArray)
     heatmapsSem = np.std(jackknifeArray)/np.sqrt(np.size(jackknifeArray))
-    print(heatmapsMean, heatmapsSem)
+    np.savetxt(os.path.join(path_of_script, outputappendix, 'jackknifeCenterEdgeRatiosMean.csv'), np.array([heatmapsMean, heatmapsSem]), delimiter=',', fmt='%s')
+    return None
 
-os.makedirs(outputpath, exist_ok=True)
+#Script starts here:
 jackknife(os.path.join(path_of_script, inputfolder), weighted=True, savePlot=False)
