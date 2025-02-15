@@ -32,6 +32,9 @@ Clone the repository into a directory of your choice, or simply download the fil
 ### 2.3 Python libraries
 Our script uses a variety of publically available python libraries, listed under **1.3 Python libraries**. You can either install them manually or simply use the supplemented *requirements.txt* file with pip via the command:
 > pip install -r path/to/requirements.txt
+### 2.4 Install time
+All in all the installation should not take longer than 10 minutes on a "*normal*" desktop computer. However, this can of course vary, depending on internet speed and CPU power.
+
 ## 3. Demo
 
 ## 4. Instructions for use
