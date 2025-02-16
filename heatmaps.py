@@ -22,9 +22,9 @@ sensor = 'one'
 number_of_2d_bins:int = 100
 
 #Set constant variables for the file structure
-outputappendix:str = 'centerEdgeRatios'
+outputappendix:str = 'heatmaps'
 inputappendix:str = ''
-inputfolder = 'allNSF/'
+inputfolder:str = 'transformedData/'
 mouse_id_length:int = 2
 
 path_of_script = os.path.dirname(os.path.realpath(__file__))
@@ -110,13 +110,13 @@ def createSingleLocationHeatmap(filepath: str, weighted: bool=False, savePlot: b
         plt.contourf(xgrid, ygrid, probabilityLocation, 50, cmap='viridis')
     plt.colorbar(label='probability density')
     if savePlot:
-        outputpath = os.path.join(path_of_script, outputappendix, filepath.split('/')[-2])
+        outputpath = os.path.join(path_of_script, outputappendix)
         plt.savefig(os.path.join(outputpath, mouseID+'heatmap.png'))
     plt.clf()
     if centerEdgeRatioBool:
         centerEdgeRatio = getCenterEdgeRatios(probabilityLocationHigh, 0.2)
         return x_array, y_array, highX, highY, centerEdgeRatio
-    return x_array, y_array, highX, highY, np.nan
+    return x_array, y_array, highX, highY
 
 def createBatchLocationHeatmaps(folderpath: str, weighted: bool=False, savePlot: bool=False, centerEdgeRatioBool: bool=False, jackknifeBool: bool=False, jackknifeFile: bool=None):
     """
@@ -296,4 +296,5 @@ def jackknife(folderPath: str, weighted: bool=False, savePlot: bool=False):
     return None
 
 #Script starts here:
-jackknife(os.path.join(path_of_script, inputfolder), weighted=True, savePlot=False)
+createSingleLocationHeatmap(os.path.join(path_of_script, inputfolder, '20.txt'), weighted=False, savePlot=True)
+createBatchLocationHeatmaps(os.path.join(path_of_script, inputfolder), weighted=False, savePlot=True)

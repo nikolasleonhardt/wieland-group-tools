@@ -173,5 +173,6 @@ cython_debug/
 # macOS file structure files
 .DS_Store
 
-# output directory
+# output directories
 transformedData/
+heatmaps/
