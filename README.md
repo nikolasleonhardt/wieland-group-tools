@@ -55,4 +55,4 @@ Of course run times can vary from machine to machine.
 
 ## 3.3 Further instructions for use
 
-The scripts were created and used in a UNIX environment. For use on a Windows machine it might be necessary to alter the nomenclature of the paths in the constants section of both scripts. Additionally, one can of course alter the other constants there to better fit individual needs. If questions arise, please feel free to contact us through GitHub.
+The scripts were created and used in a UNIX environment. For use on a Windows machine it might be necessary to alter the nomenclature of the paths in the constants section of both scripts. Additionally of course, please feel free to also alter other constants or experiment with the other functions provided. If questions arise, please feel free to contact us through GitHub.
