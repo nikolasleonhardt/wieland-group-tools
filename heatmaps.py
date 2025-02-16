@@ -175,7 +175,7 @@ def createBatchLocationHeatmaps(folderpath: str, weighted: bool=False, savePlot:
         plt.contourf(xgrid, ygrid, probabilityLocation, 50, cmap='viridis')
     plt.colorbar(label='probability density')
     if savePlot:
-        outputpath = os.path.join(path_of_script, outputappendix, folderpath)
+        outputpath = os.path.join(path_of_script, outputappendix)
         plt.savefig(os.path.join(outputpath, 'combined_heatmap.png'))
     plt.clf()
     if jackknifeBool:
