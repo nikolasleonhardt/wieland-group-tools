@@ -35,6 +35,27 @@ Our script uses a variety of publically available python libraries, listed under
 ### 2.4 Install time
 All in all the installation should not take longer than 10 minutes on a "*normal*" desktop computer. However, this can of course vary, depending on internet speed and CPU power.
 
-## 3. Demo
+## 3. Demo and instructions for use
 
-## 4. Instructions for use
+### 3.1 Test data and demo
+
+For demo purposes a small set of test data is provided in the GitHub repository under "testData/originalData". The signal and location data is originally saved in separate files. 
+To combine the data into a single file, bin the signal data to the camera frame rate and transform to polar coordinates one can run the "transform_data.py" script. The script works out of the box with the test data provided.
+The script then creates a directory named "transformedData", where the new transformed data files are stored. The data structure in these files is as following:
+    time, radius, polar angle, signal 1 data, signal 2 data
+     .  ,   .   ,      .     ,       .       ,       .
+     .  ,   .   ,      .     ,       .       ,       .  
+     .  ,   .   ,      .     ,       .       ,       .   
+
+We use this file format in our further analysis.
+
+After the original data has been "transformed", one can run the "heatmaps.py" script to obtain heatmaps representing the probability density of the mouse in the arena. Again, this script should work out of the box on the provided test data once it has been preprocessed with the previous script. The resulting heatmaps can then be found in a directory called "heatmaps/".
+
+### 3.2 Expected run time
+
+On a Macbook Air M2 (16GB) the "transform_data.py" script with the test data took 75.0 s to run and the "heatmaps.py" script 12.6 s.
+Of course run times can vary from machine to machine.
+
+## 3.3 Further instructions for use
+
+The scripts were created and used in a UNIX environment. For use on a Windows machine it might be necessary to alter the nomenclature of the paths in the constants section of both scripts. Additionally, one can of course alter the other constants there to better fit individual needs. If questions arise, please feel free to contact us through GitHub.
