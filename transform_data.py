@@ -11,11 +11,12 @@ experiment_cutoff_time:int = 600
 #Length of the unique mouse identifier
 mouse_id_length:int = 2
 #Directory variables
-outputAppendix = 'fSISNI'
-name_of_data_folder = 'SISNI'
+outputAppendix = 'transformedData'
+name_of_data_folder = 'testData/originalData'
 
 path_of_script = os.path.dirname(os.path.realpath(__file__))
 outputpath = os.path.join(path_of_script, outputAppendix)
+os.makedirs(outputpath, exist_ok=True)
 
 def extract_mouse_id(file_name: str, mouse_id_length: int) -> str:
     """
@@ -187,8 +188,6 @@ def single_file_analysis(location_path: str, signal_path: str) -> np.ndarray:
 #Get the paths to the original signal and location files respectively 
 signal_file_paths = glob.glob('*.csv', root_dir=os.path.join(path_of_script, name_of_data_folder, 'signal'))
 location_file_paths = glob.glob('*.csv', root_dir=os.path.join(path_of_script, name_of_data_folder, 'location'))
-#Create output directory
-os.makedirs(outputpath, exist_ok=True)
 
 #Create empty array to store the mouse ids of the various files
 mouse_id_array_signals = np.zeros(np.size(signal_file_paths))
