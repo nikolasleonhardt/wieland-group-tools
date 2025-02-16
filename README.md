@@ -42,10 +42,10 @@ All in all the installation should not take longer than 10 minutes on a "*normal
 For demo purposes a small set of test data is provided in the GitHub repository under "testData/originalData". The signal and location data is originally saved in separate files. 
 To combine the data into a single file, bin the signal data to the camera frame rate and transform to polar coordinates one can run the "transform_data.py" script. The script works out of the box with the test data provided.
 The script then creates a directory named "transformedData", where the new transformed data files are stored. The data structure in these files is as following:
-    time, radius, polar angle, signal 1 data, signal 2 data
-     .  ,   .   ,      .     ,       .       ,       .
-     .  ,   .   ,      .     ,       .       ,       .  
-     .  ,   .   ,      .     ,       .       ,       .   
+    time, radius, polar angle, signal 1 data, signal 2 data\
+     .  ,   .   ,      .     ,       .       ,       .\
+     .  ,   .   ,      .     ,       .       ,       .\  
+     .  ,   .   ,      .     ,       .       ,       .\   
 
 We use this file format in our further analysis.
 
