@@ -80,6 +80,7 @@ def single_file_analysis(filepath: str, number_of_bins: int, savefig: bool=False
         tuple: A tuple containing the binned photometry data, the standard error of the mean, the standard deviation, and the mouse
         id.
     """
+    number_of_cuts = number_of_bins+1
     mouse_id = extract_mouse_id(os.path.basename(filepath), mouse_id_length)
     current_data_dataframe = pd.read_csv(filepath, sep=',', header=None)
     current_data_array = current_data_dataframe.to_numpy()
@@ -97,7 +98,18 @@ def single_file_analysis(filepath: str, number_of_bins: int, savefig: bool=False
             sqrt_of_sample_size = np.sqrt(photometry_array_1[np.logical_and(radius_data_array > bin_tresholds[i], radius_data_array < bin_tresholds[i+1])].size)
             binned_photometry_1_std[i] = np.std(photometry_array_1[np.logical_and(radius_data_array > bin_tresholds[i], radius_data_array < bin_tresholds[i+1])])
             binned_photometry_1_sem[i] = binned_photometry_1_std[i]/sqrt_of_sample_size
-    
+    if savefig:
+        plt.errorbar(binned_radii, binned_photometry_1, yerr=binned_photometry_1_sem, label=mouse_id)
+        if fit:
+            popt, pcov = curve_fit(linearModel, binned_radii, binned_photometry_1)
+            plt.plot(binned_radii, linearModel(binned_radii, *popt), label='slope: '+str(popt[0]))
+        bin_string = 'Bins: '+str(number_of_bins)
+        plt.title(bin_string)
+        plt.xlabel('Radius')
+        plt.ylabel('Photometry')
+        plt.legend()
+        plt.savefig(os.path.join(output_dir, mouse_id+'.svg'), transparent=True, format='svg')
+        plt.clf()
     return binned_photometry_1, binned_photometry_1_sem, binned_photometry_1_std, mouse_id
 
 def badgeAnalysis(folderpath: str, number_of_bins: int, savefig: bool=False, error: str='std') -> tuple:
@@ -121,40 +133,25 @@ def badgeAnalysis(folderpath: str, number_of_bins: int, savefig: bool=False, err
     for i, file in enumerate(list_of_files):
         file_path = os.path.join(folderpath, file)
         print(file_path)
-        buffer_photometry_array[i], buffer_sem_array[i], buffer_std_array, mouse_id_array[i] = single_file_analysis(file_path, number_of_bins, error)
+        buffer_photometry_array[i], buffer_sem_array[i], buffer_std_array, mouse_id_array[i] = single_file_analysis(file_path, number_of_bins, savefig=savefig, error=error)
     final_photometry_array = np.nanmean(buffer_photometry_array, axis=0)
     final_std_array = np.nanstd(buffer_photometry_array, axis=0)
     final_sem_array = final_std_array/np.sqrt(len(list_of_files))
+    if savefig:
+        plt.plot(np.linspace(0., 1., number_of_bins), final_photometry_array)
+        plt.fill_between(np.linspace(0., 1., number_of_bins), final_photometry_array-final_sem_array, final_photometry_array+final_sem_array, alpha=0.2)
+        if fit:
+            popt, pcov = curve_fit(linearModel, np.linspace(0., 1., number_of_bins), final_photometry_array)
+            plt.plot(np.linspace(0., 1., number_of_bins+1), linearModel(np.linspace(0., 1., number_of_bins+1), *popt), label='slope: '+str(popt[0]))
+        bin_string = 'Bins: '+str(number_of_bins)
+        plt.title(bin_string)
+        plt.xlabel('Radius')
+        plt.ylabel('Photometry')
+        plt.legend()
+        plt.savefig(os.path.join(output_dir, 'combined.svg'), transparent=True, format='svg')
+        plt.clf()
     return final_photometry_array, final_sem_array, final_std_array
 
 #Script starts here:
-for number_of_bins in list_of_wanted_bin_numbers:
-    number_of_cuts = number_of_bins + 1
-    bin_string = str(number_of_bins)
-    testDataNSF_photometry, testDataNSF_sem, testDataNSF_std = badgeAnalysis(os.path.join(path_of_script, 'testData', 'NSF'), number_of_bins)
-    testDataOF_photometry, testDataOF_sem, testDataOF_std = badgeAnalysis(os.path.join(path_of_script, 'testData', 'OF'), number_of_bins)
-    if fit:
-        popt_nsf, pcov_nsf = curve_fit(linearModel, np.linspace(0., 1., number_of_bins), testDataNSF_photometry, p0=[testDataNSF_photometry[-1]-testDataNSF_photometry[0], testDataNSF_photometry[0]], sigma=testDataNSF_std)
-        popt_of, pcov_of = curve_fit(linearModel, np.linspace(0., 1., number_of_bins), testDataOF_photometry, p0=[testDataOF_photometry[-1]-testDataOF_photometry[0], testDataOF_photometry[0]], sigma=testDataOF_std)
-    
-    np.savetxt(os.path.join(output_dir, bin_string+'_NSF.txt'), np.transpose(np.array([testDataNSF_photometry, testDataNSF_sem])), delimiter=',', header='mean, sem')
-    np.savetxt(os.path.join(output_dir, bin_string+'_OF.txt'), np.transpose(np.array([testDataOF_photometry, testDataOF_sem])), delimiter=',', header='mean, sem')
-
-    plt.plot(np.linspace(0., 1., number_of_bins), testDataNSF_photometry, label='NSF')
-    plt.fill_between(np.linspace(0., 1., number_of_bins), testDataNSF_photometry-testDataNSF_sem, testDataNSF_photometry+testDataNSF_sem, alpha=0.2, label='NSF sem')
-    plt.plot(np.linspace(0., 1., number_of_bins), testDataOF_photometry, label='OF')
-    plt.fill_between(np.linspace(0., 1., number_of_bins), testDataOF_photometry-testDataOF_sem, testDataOF_photometry+testDataOF_sem, alpha=0.2, label='OF sem')
-
-    if fit:
-        plt.plot(np.linspace(0., 1., number_of_bins), linearModel(np.linspace(0., 1., number_of_bins), *popt_nsf), label='NSF Fit')
-        plt.plot(np.linspace(0., 1., number_of_bins), linearModel(np.linspace(0., 1., number_of_bins), *popt_of), label='OF Fit')
-
-        np.savetxt(os.path.join(output_dir, bin_string+'_nsf_fitparams.txt'), np.array([*popt_nsf, np.sqrt(pcov_nsf[0][0]), np.sqrt(pcov_nsf[1][1])]), delimiter=',', header='m, y0, delta m, delta y0')
-        np.savetxt(os.path.join(output_dir, bin_string+'_of_fitparams.txt'), np.array([*popt_of, np.sqrt(pcov_of[0][0]), np.sqrt(pcov_of[1][1])]), delimiter=',', header='m, y0, delta m, delta y0')
-    
-    plt.title(bin_string)
-    plt.ylim(-0.5, 1.)
-    plt.legend()
-    plt.savefig(os.path.join(output_dir, bin_string+'.svg'), transparent=True, format='svg')
-    plt.clf()
-
+single_file_analysis(os.path.join(path_of_script, 'transformedData', '7.txt'), 10, True, 'std')
+badgeAnalysis(os.path.join(path_of_script, 'transformedData'), 10, True, 'std')
