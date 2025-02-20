@@ -35,7 +35,7 @@ z_max = 0
 zAreaMax = 0
 colorPlotMax = 0.0036
 
-def extract_mouse_id(file_name, mouse_id_length):
+def extract_mouse_id(file_name: str, mouse_id_length: int) -> str:
     """
     Extracts the mouse id from the given file name.
 
