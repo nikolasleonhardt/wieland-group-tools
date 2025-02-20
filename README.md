@@ -46,7 +46,7 @@ The script then creates a directory named "transformedData", where the new trans
 
 We use this file format in our further analysis.
 
-After the original data has been "transformed", one can run the "heatmaps.py" script to obtain heatmaps representing the probability density of the mouse in the arena. Again, this script should work out of the box on the provided test data once it has been preprocessed with the previous script. The resulting heatmaps can then be found in a directory called "heatmaps/".
+After the original data has been "transformed", one can run the "heatmaps.py" and "signal_over_radius.py" scripts to obtain heatmaps representing the probability density of the mouse in the arena and the signal over the radius from the center of the arena, respectively. Again, these script should work out of the box on the provided test data once it has been preprocessed with the previous script. The resulting heatmaps can then be found in a directory called "heatmaps/" and the plots showing signal over radius in a directory called "signal_over_radius/".
 
 ### 3.2 Expected run time
 
