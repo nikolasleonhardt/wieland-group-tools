@@ -24,7 +24,7 @@ number_of_2d_bins:int = 100
 #Set constant variables for the file structure
 outputappendix:str = 'heatmaps'
 inputappendix:str = ''
-inputfolder:str = 'transformedData/'
+inputfolder:str = 'transformedData'
 mouse_id_length:int = 2
 
 path_of_script = os.path.dirname(os.path.realpath(__file__))
@@ -91,20 +91,21 @@ def createSingleLocationHeatmap(filepath: str, weighted: bool=False, savePlot: b
     highY = y_array[~high_mask]
     lengthOfExperiment = np.size(radius_data_array)
 
-    if weighted and highX.size == 0:
-        warnings.warn('This mouse had no high calcium measurements. Therefore no heatmap will be created.')
-        return x_array, y_array, highX, highY, np.nan
+    if weighted:
+        xyHigh = np.vstack([highX, highY])
+        try:
+            kdeHigh = gaussian_kde(xyHigh)
+        except:
+            warnings.warn('This mouse did not have sufficient high calcium measurements. Therefore no heatmap will be created.')
+            return x_array, y_array, highX, highY
 
-    
-    xyHigh = np.vstack([highX, highY])
     xy = np.vstack([x_array, y_array])
-    kdeHigh = gaussian_kde(xyHigh)
     kde = gaussian_kde(xy)
 
     xgrid, ygrid = np.mgrid[-1:1:100j, -1:1:100j]
     probabilityLocation = kde(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
-    probabilityLocationHigh = kdeHigh(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
     if weighted:
+        probabilityLocationHigh = kdeHigh(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
         plt.contourf(xgrid, ygrid, probabilityLocationHigh, 50, cmap='viridis')
     else:
         plt.contourf(xgrid, ygrid, probabilityLocation, 50, cmap='viridis')
@@ -153,13 +154,18 @@ def createBatchLocationHeatmaps(folderpath: str, weighted: bool=False, savePlot:
         y_combined = np.concatenate([y_combined, y_buffer])
         highX_combined = np.concatenate([highX_combined, highX_buffer])
         highY_combined = np.concatenate([highY_combined, highY_buffer])
-    xyLocationCombined = np.vstack([x_combined, y_combined])
-    xyHighCombined = np.vstack([highX_combined, highY_combined])
-    kdeLocation = gaussian_kde(xyLocationCombined)
-    kdeHigh = gaussian_kde(xyHighCombined)
     xgrid, ygrid = np.mgrid[-1:1:100j, -1:1:100j]
+    xyLocationCombined = np.vstack([x_combined, y_combined])
+    kdeLocation = gaussian_kde(xyLocationCombined)
     probabilityLocation = kdeLocation(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
-    probabilityLocationHigh = kdeHigh(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
+    if weighted:
+        xyHighCombined = np.vstack([highX_combined, highY_combined])
+        try:
+            kdeHigh = gaussian_kde(xyHighCombined)
+        except:
+            warnings.warn('There were not enough high calcium measurements to create a heatmap.')
+            return x_combined, y_combined, highX_combined, highY_combined
+        probabilityLocationHigh = kdeHigh(np.vstack([xgrid.ravel(), ygrid.ravel()])).reshape(xgrid.shape)
     if centerEdgeRatioBool:
         finalArray = np.vstack([miceList, centerEdgeRatioArray])
         np.savetxt(os.path.join(path_of_script, outputappendix, 'centerEdgeRatios.csv'), finalArray.T, delimiter=',', fmt='%s')
@@ -296,5 +302,5 @@ def jackknife(folderPath: str, weighted: bool=False, savePlot: bool=False):
     return None
 
 #Script starts here:
-createSingleLocationHeatmap(os.path.join(path_of_script, inputfolder, '20.txt'), weighted=False, savePlot=True)
-createBatchLocationHeatmaps(os.path.join(path_of_script, inputfolder), weighted=False, savePlot=True)
+createSingleLocationHeatmap(os.path.join(path_of_script, inputfolder, '7.txt'), weighted=True, savePlot=True)
+createBatchLocationHeatmaps(os.path.join(path_of_script, inputfolder), weighted=True, savePlot=True)

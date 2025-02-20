@@ -12,7 +12,8 @@ experiment_cutoff_time:int = 600
 mouse_id_length:int = 2
 #Directory variables
 outputAppendix = 'transformedData'
-name_of_data_folder = 'testData/originalData'
+name_of_data_folder = 'testData/NSF'
+#name_of_data_folder = 'testData/OF'
 
 path_of_script = os.path.dirname(os.path.realpath(__file__))
 outputpath = os.path.join(path_of_script, outputAppendix)
@@ -213,4 +214,4 @@ for index, mouse_id in enumerate(mouse_id_array_locations):
         transposed_final_data = final_data_array.transpose()
         np.savetxt(os.path.join(outputpath, str(int(mouse_id))+'.txt'), final_data_array, fmt='%1.14f', delimiter=',')
     else:
-        warnings.warn(f"There is a signal file missing for mouse id: {mouse_id}")    
+        warnings.warn(f"There is a signal file missing for mouse id: {mouse_id}")   
