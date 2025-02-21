@@ -302,5 +302,5 @@ def jackknife(folderPath: str, weighted: bool=False, savePlot: bool=False):
     return None
 
 #Script starts here:
-createSingleLocationHeatmap(os.path.join(path_of_script, inputfolder, '7.txt'), weighted=True, savePlot=True)
+createSingleLocationHeatmap(os.path.join(path_of_script, inputfolder, '2.txt'), weighted=True, savePlot=True)
 createBatchLocationHeatmaps(os.path.join(path_of_script, inputfolder), weighted=True, savePlot=True)

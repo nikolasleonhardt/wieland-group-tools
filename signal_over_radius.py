@@ -153,5 +153,5 @@ def badgeAnalysis(folderpath: str, number_of_bins: int, savefig: bool=False, err
     return final_photometry_array, final_sem_array, final_std_array
 
 #Script starts here:
-single_file_analysis(os.path.join(path_of_script, 'transformedData', '7.txt'), 10, True, 'std')
+single_file_analysis(os.path.join(path_of_script, 'transformedData', '2.txt'), 10, True, 'std')
 badgeAnalysis(os.path.join(path_of_script, 'transformedData'), 10, True, 'std')
