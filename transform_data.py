@@ -7,7 +7,8 @@ import glob
 import warnings
 
 #Time when the experiment shuts down regardless of bite
-experiment_cutoff_time:int = 1200
+#experiment_cutoff_time = 600 #For NSF
+experiment_cutoff_time:int = 1200 #For OF
 #Length of the unique mouse identifier
 mouse_id_length:int = 2
 #Directory variables
